@@ -1,0 +1,2207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NHL Live Scores</title>
+  <link rel="stylesheet" href="https://use.typekit.net/zds0upx.css">
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: #0d1b2f;
+      --panel-2: #13243d;
+      --text: #f4f7fb;
+      --muted: #9fb2ca;
+      --line: rgba(255, 255, 255, 0.1);
+      --accent: #d71920;
+      --accent-2: #2b6fff;
+      --good: #21c06b;
+      --warning: #f5b942;
+      --danger: #ff6464;
+      --shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'transducer', Arial, Helvetica, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(43, 111, 255, 0.18), transparent 35%),
+        radial-gradient(circle at top right, rgba(215, 25, 32, 0.18), transparent 30%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .app {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 34px 0 56px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 24px;
+    }
+
+    .eyebrow {
+      font-family: 'transducer-extended', 'transducer', Arial, Helvetica, sans-serif;
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-family: 'transducer-extended', 'transducer', Arial, Helvetica, sans-serif;
+      font-weight: 900;
+      margin: 0;
+      font-size: clamp(2rem, 5vw, 4.2rem);
+      line-height: 0.92;
+      letter-spacing: -0.07em;
+    }
+
+    .subtitle {
+      max-width: 760px;
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.55;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    input[type="date"] {
+      appearance: none;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      font: inherit;
+      color-scheme: dark;
+      outline: none;
+    }
+
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.09);
+      color: var(--text);
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+    }
+
+    button:hover { transform: translateY(-1px); background: rgba(255, 255, 255, 0.14); }
+
+    .primary-btn { background: linear-gradient(135deg, var(--accent), #9d1018); }
+    .primary-btn:hover { background: linear-gradient(135deg, #ef2730, #ad121c); }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.055);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+      margin-bottom: 22px;
+      backdrop-filter: blur(16px);
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 11px;
+      background: rgba(255, 255, 255, 0.055);
+      color: var(--muted);
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--good);
+      box-shadow: 0 0 0 5px rgba(33, 192, 107, 0.14);
+    }
+
+    .connection-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--warning);
+      box-shadow: 0 0 0 5px rgba(245, 185, 66, 0.14);
+    }
+
+    .connection-dot.is-connected {
+      background: var(--good);
+      box-shadow: 0 0 0 5px rgba(33, 192, 107, 0.14);
+    }
+
+    .connection-dot.is-disconnected {
+      background: var(--danger);
+      box-shadow: 0 0 0 5px rgba(255, 100, 100, 0.14);
+    }
+
+    .error {
+      display: none;
+      border: 1px solid rgba(255, 100, 100, 0.45);
+      background: rgba(255, 100, 100, 0.11);
+      color: #ffd7d7;
+      border-radius: 18px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+      line-height: 1.45;
+    }
+
+    .loading {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      margin: 20px 0;
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 3px solid rgba(255, 255, 255, 0.18);
+      border-top-color: var(--text);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .section { margin-top: 28px; }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-family: 'transducer-extended', 'transducer', Arial, Helvetica, sans-serif;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+    }
+
+    .count-badge {
+      color: var(--muted);
+      font-size: 0.86rem;
+      font-weight: 800;
+      border: 1px solid var(--line);
+      padding: 6px 9px;
+      border-radius: 999px;
+    }
+
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .game-card {
+      position: relative;
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--away-color, #ffffff), transparent 94%), transparent 36%),
+        linear-gradient(315deg, color-mix(in srgb, var(--home-color, #ffffff), transparent 94%), transparent 36%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.045));
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      overflow: hidden;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.24);
+    }
+
+    .game-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 6px;
+      background: linear-gradient(180deg, var(--away-color, #888), var(--home-color, #888));
+    }
+
+    .game-card::after {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 6px;
+      height: 92px;
+      background:
+        linear-gradient(112deg,
+          color-mix(in srgb, var(--away-color-2, var(--away-color, #888)), transparent 72%) 0%,
+          color-mix(in srgb, var(--away-color-3, var(--away-color-2, var(--away-color, #888))), transparent 84%) 23%,
+          transparent 24%,
+          transparent 76%,
+          color-mix(in srgb, var(--home-color-3, var(--home-color-2, var(--home-color, #888))), transparent 84%) 77%,
+          color-mix(in srgb, var(--home-color-2, var(--home-color, #888)), transparent 72%) 100%
+        );
+      clip-path: polygon(0 0, 100% 0, 100% 42%, 58% 100%, 42% 100%, 0 42%);
+      opacity: 0.58;
+      pointer-events: none;
+    }
+
+    .game-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 15px 13px 19px;
+      background: rgba(255, 255, 255, 0.045);
+      border-bottom: 1px solid var(--line);
+      position: relative;
+      z-index: 1;
+    }
+
+    .matchup-mini {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-left: 8px;
+    }
+
+    .matchup-mini span:nth-child(1) { color: var(--away-color, var(--muted)); }
+    .matchup-mini span:nth-child(3) { color: var(--home-color, var(--muted)); }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      position: relative;
+      z-index: 1;
+    }
+
+    .status.live { color: var(--good); }
+    .status.upcoming { color: var(--warning); }
+    .status.final { color: var(--muted); }
+
+    .game-time {
+      color: var(--muted);
+      font-size: 0.86rem;
+      font-weight: 700;
+      text-align: right;
+      position: relative;
+      z-index: 1;
+    }
+
+    .teams {
+      padding: 12px 15px 14px 19px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .team-row {
+      --team-color: #ffffff;
+      --team-color-2: #ffffff;
+      --team-color-3: #ffffff;
+      display: grid;
+      grid-template-columns: 66px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      position: relative;
+      isolation: isolate;
+    }
+
+    .team-row:last-child { border-bottom: 0; }
+
+    .team-row::before {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      inset: 8px 0 8px 52px;
+      border-radius: 18px;
+      background:
+        linear-gradient(90deg,
+          color-mix(in srgb, var(--team-color-2, var(--team-color)), transparent 84%),
+          transparent 34%,
+          color-mix(in srgb, var(--team-color-3, var(--team-color-2, var(--team-color))), transparent 88%) 100%
+        );
+      clip-path: polygon(0 0, 88% 0, 100% 50%, 88% 100%, 0 100%, 6% 50%);
+      opacity: 0.88;
+    }
+
+    .team-row::after {
+      content: "";
+      position: absolute;
+      right: 48px;
+      top: 50%;
+      width: 78px;
+      height: 28px;
+      border-radius: 999px;
+      transform: translateY(-50%) skewX(-18deg);
+      background:
+        linear-gradient(90deg,
+          color-mix(in srgb, var(--team-color-2, var(--team-color)), transparent 18%) 0 46%,
+          color-mix(in srgb, var(--team-color-3, var(--team-color-2, var(--team-color))), transparent 24%) 46% 100%
+        );
+      opacity: 0.18;
+      pointer-events: none;
+    }
+
+    .logo-wrap {
+      width: 66px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      overflow: visible;
+    }
+
+    .logo-wrap img {
+      width: 58px;
+      height: 58px;
+      object-fit: contain;
+      filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.35));
+    }
+
+    .team-name { min-width: 0; }
+
+    .team-main {
+      font-family: 'transducer-extended', 'transducer', Arial, Helvetica, sans-serif;
+      font-weight: 900;
+      font-size: 1rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .team-sub {
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-top: 3px;
+      font-weight: 700;
+    }
+
+    .team-abbrev { color: var(--team-color); font-weight: 950; }
+
+    .score {
+      font-family: 'transducer-extended', 'transducer', Arial, Helvetica, sans-serif;
+      font-size: 2.15rem;
+      font-weight: 950;
+      letter-spacing: -0.06em;
+      min-width: 38px;
+      text-align: right;
+      position: relative;
+      z-index: 1;
+    }
+
+    .game-footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 0 15px 15px 19px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .star-player {
+      margin: 0 15px 15px 19px;
+      display: grid;
+      grid-template-columns: 96px 1fr auto;
+      align-items: stretch;
+      gap: 12px;
+      padding: 0 12px 0 0;
+      min-height: 92px;
+      border-radius: 18px;
+      border: 1px solid color-mix(in srgb, var(--star-color, #ffffff), transparent 68%);
+      background:
+        linear-gradient(120deg, color-mix(in srgb, var(--star-color, #ffffff), transparent 76%) 0 20%, transparent 21%),
+        linear-gradient(135deg, color-mix(in srgb, var(--star-color-2, var(--star-color, #ffffff)), transparent 82%), transparent),
+        rgba(255, 255, 255, 0.045);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .star-player::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0 96px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--star-color-2, var(--star-color)), var(--star-color));
+      opacity: 0.5;
+    }
+
+    .star-headshot {
+      width: 96px;
+      height: 100%;
+      min-height: 92px;
+      border-radius: 18px 0 0 18px;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      background: transparent;
+      border: 0;
+      font-weight: 950;
+    }
+
+    .star-headshot img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .star-body {
+      padding: 12px 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .star-kicker {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 950;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+
+    .star-name {
+      font-family: 'transducer-extended', 'transducer', Arial, Helvetica, sans-serif;
+      font-weight: 900;
+      font-size: 1rem;
+      line-height: 1.15;
+    }
+
+    .star-reason {
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.35;
+      margin-top: 4px;
+    }
+
+    .star-team {
+      color: var(--star-color, var(--text));
+      font-size: 0.86rem;
+      font-weight: 950;
+      text-align: right;
+      padding: 12px 0;
+      display: flex;
+      align-items: center;
+    }
+
+    .highlights { padding: 0 15px 16px 19px; }
+
+    .highlights-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-top: 2px;
+      margin-bottom: 10px;
+    }
+
+    .highlights-title {
+      margin: 0;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .highlight-filter-panel {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 0 0 10px;
+      padding: 10px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      background: rgba(0, 0, 0, 0.14);
+    }
+
+    .highlight-filter-field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .highlight-filter-field label {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 950;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .filter-label-icon {
+      width: 14px;
+      height: 14px;
+      display: inline-block;
+      background: var(--muted);
+      mask-size: contain;
+      mask-repeat: no-repeat;
+      mask-position: center;
+      -webkit-mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+      -webkit-mask-position: center;
+    }
+
+    .highlight-filter-select {
+      width: 100%;
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      padding: 10px 36px 10px 12px;
+      background:
+        linear-gradient(45deg, transparent 50%, var(--muted) 50%) right 15px center / 6px 6px no-repeat,
+        linear-gradient(135deg, color-mix(in srgb, var(--away-color-2, var(--away-color, #ffffff)), transparent 80%), color-mix(in srgb, var(--home-color-2, var(--home-color, #ffffff)), transparent 88%)),
+        rgba(255, 255, 255, 0.055);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 900;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .highlight-filter-select option {
+      background: #0d1b2f;
+      color: var(--text);
+    }
+
+    .highlight-list { display: grid; gap: 8px; }
+
+    .highlight-item {
+      --event-color: #8a96a8;
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      background:
+        linear-gradient(90deg, color-mix(in srgb, var(--event-color), transparent 92%), transparent 46%),
+        rgba(0, 0, 0, 0.15);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .highlight-item::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 4px;
+      background: var(--event-color);
+    }
+
+    .highlight-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: color-mix(in srgb, var(--event-color), transparent 82%);
+      border: 1px solid color-mix(in srgb, var(--event-color), transparent 55%);
+      overflow: hidden;
+      font-size: 1rem;
+      font-weight: 950;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .highlight-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .highlight-event-glyph {
+      width: 22px;
+      height: 22px;
+      background: var(--event-color);
+      mask-size: contain;
+      mask-repeat: no-repeat;
+      mask-position: center;
+      -webkit-mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+      -webkit-mask-position: center;
+    }
+
+    .highlight-event-badge {
+      position: absolute;
+      right: -3px;
+      bottom: -3px;
+      width: 19px;
+      height: 19px;
+      border-radius: 50%;
+      background: #07111f;
+      border: 1px solid rgba(255,255,255,0.16);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 6px 10px rgba(0,0,0,0.35);
+    }
+
+    .highlight-event-badge .highlight-event-glyph {
+      width: 10px;
+      height: 10px;
+    }
+
+    .highlight-main { min-width: 0; }
+
+    .highlight-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 3px;
+    }
+
+    .highlight-meta .team-chip { color: var(--event-color); }
+
+    .highlight-text {
+      font-size: 0.88rem;
+      font-weight: 800;
+      line-height: 1.32;
+    }
+
+    .highlight-subtext {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.35;
+    }
+
+    .highlight-link {
+      color: var(--text);
+      text-decoration: underline;
+      text-decoration-color: color-mix(in srgb, var(--event-color), transparent 35%);
+      text-underline-offset: 3px;
+    }
+
+    .empty-highlights {
+      border: 1px dashed rgba(255, 255, 255, 0.16);
+      border-radius: 16px;
+      padding: 13px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.03);
+      font-size: 0.86rem;
+      line-height: 1.4;
+    }
+
+    details.full-feed {
+      margin-top: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.035);
+      overflow: hidden;
+    }
+
+    details.full-feed summary {
+      cursor: pointer;
+      padding: 12px 13px;
+      color: var(--text);
+      font-size: 0.86rem;
+      font-weight: 900;
+      list-style-position: inside;
+      user-select: none;
+    }
+
+    .period-group {
+      padding: 12px 13px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .period-group-title {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 950;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .empty-state {
+      border: 1px dashed rgba(255, 255, 255, 0.18);
+      border-radius: 22px;
+      padding: 22px;
+      color: var(--muted);
+      text-align: center;
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .checkbox-line {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 700;
+      user-select: none;
+    }
+
+    .checkbox-line input { accent-color: var(--accent); }
+
+    @media (max-width: 980px) {
+      .games-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 820px) {
+      .hero { grid-template-columns: 1fr; }
+      .controls { justify-content: flex-start; }
+    }
+
+    @media (max-width: 640px) {
+      .highlight-filter-panel {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 470px) {
+      .app { width: min(100% - 20px, 1180px); padding-top: 22px; }
+      .toolbar, .game-card { border-radius: 18px; }
+      .controls, .toolbar { align-items: stretch; }
+      .controls > *, input[type="date"] { width: 100%; }
+      .game-top { align-items: flex-start; flex-direction: column; }
+      .game-time { text-align: left; }
+      .team-row { grid-template-columns: 58px 1fr auto; }
+      .logo-wrap { width: 58px; height: 54px; }
+      .logo-wrap img { width: 52px; height: 52px; }
+      .star-player { grid-template-columns: 84px 1fr; }
+      .star-headshot { width: 84px; min-height: 88px; }
+      .star-team { grid-column: 2; padding-top: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <div>
+        <div class="eyebrow">NHL Scoreboard</div>
+        <h1>Live Scores</h1>
+        <p class="subtitle">Today’s NHL games, live statuses, team branding, player headshots and key play-by-play highlights from goals, penalties and other major events.</p>
+      </div>
+      <div class="controls">
+        <input id="dateInput" type="date" aria-label="Choose a date" />
+        <button id="todayBtn" type="button">Today</button>
+        <button id="refreshBtn" class="primary-btn" type="button">Refresh</button>
+      </div>
+    </header>
+
+    <section class="toolbar" aria-label="Update information">
+      <div class="meta">
+        <span id="liveStatus" class="pill"><span id="connectionDot" class="connection-dot"></span> Connecting to live server</span>
+        <span class="pill">60 s fallback</span>
+        <span id="dateLabel" class="pill">Date: —</span>
+        <span id="lastUpdated" class="pill">Updated: —</span>
+        <span id="assetsStatus" class="pill">Assets: loading...</span>
+      </div>
+      <label class="checkbox-line"><input id="autoRefresh" type="checkbox" checked /> Automatic fallback refresh</label>
+    </section>
+
+    <div id="errorBox" class="error"></div>
+    <div id="loading" class="loading"><span class="spinner" aria-hidden="true"></span><span>Loading games...</span></div>
+
+    <section class="section" aria-labelledby="liveTitle">
+      <div class="section-header">
+        <h2 id="liveTitle" class="section-title">Live</h2>
+        <span id="liveCount" class="count-badge">0</span>
+      </div>
+      <div id="liveGames" class="games-grid"></div>
+    </section>
+
+    <section class="section" aria-labelledby="upcomingTitle">
+      <div class="section-header">
+        <h2 id="upcomingTitle" class="section-title">Upcoming</h2>
+        <span id="upcomingCount" class="count-badge">0</span>
+      </div>
+      <div id="upcomingGames" class="games-grid"></div>
+    </section>
+
+    <section class="section" aria-labelledby="finalTitle">
+      <div class="section-header">
+        <h2 id="finalTitle" class="section-title">Final</h2>
+        <span id="finalCount" class="count-badge">0</span>
+      </div>
+      <div id="finalGames" class="games-grid"></div>
+    </section>
+  </main>
+
+  <script>
+    const LIVE_SERVER_BASE = "https://nhl-live-server.onrender.com";
+    const NHL_HTTP_PROXY_URL = `${LIVE_SERVER_BASE}/api/nhl`;
+    const NHL_WEBSOCKET_URL = LIVE_SERVER_BASE.replace(/^http/, "ws") + "/live";
+
+    const TEAM_ASSETS_URL = "https://script.google.com/macros/s/AKfycbwlqptAxL2hZ7jqAipNR50iVAooAy46ifa0rQXCxouOqOohMcoSxjGEz8pSdt_lK-gAmw/exec";
+    const PLAYER_ASSETS_URL = "https://script.google.com/macros/s/AKfycbz5lFU3O2l_xohqu86r6Hdx_wrqFJstNOoRRrwyNnQtsMM9UcLxWPXlt57hArFEeRY9/exec";
+
+    const ICON_URLS = {
+      game: "https://raw.githubusercontent.com/valleetim04/nhl-live-server-media/d41b60e7e83512882ecffd5cab002a59e64c13be/icons/icon_game.svg",
+      turnover: "https://raw.githubusercontent.com/valleetim04/nhl-live-server-media/d41b60e7e83512882ecffd5cab002a59e64c13be/icons/icon_turnover.svg",
+      hit: "https://raw.githubusercontent.com/valleetim04/nhl-live-server-media/d41b60e7e83512882ecffd5cab002a59e64c13be/icons/icon_hit.svg",
+      shot: "https://raw.githubusercontent.com/valleetim04/nhl-live-server-media/d41b60e7e83512882ecffd5cab002a59e64c13be/icons/icon_shot.svg",
+      penalty: "https://raw.githubusercontent.com/valleetim04/nhl-live-server-media/d41b60e7e83512882ecffd5cab002a59e64c13be/icons/icon_penalty.svg",
+      goal: "https://raw.githubusercontent.com/valleetim04/nhl-live-server-media/d41b60e7e83512882ecffd5cab002a59e64c13be/icons/icon_goal.svg"
+    };
+
+    const REFRESH_MS = 60000;
+    const LIVE_HIGHLIGHT_REFRESH_MS = 30000;
+    const CLOCK_TICK_MS = 1000;
+    const FETCH_TIMEOUT_MS = 6500;
+    const LOGO_THEME = "dark";
+
+    const KEY_EVENT_TYPES = new Set([
+      "goal",
+      "penalty",
+      "delayed-penalty",
+      "shot-on-goal",
+      "missed-shot",
+      "blocked-shot",
+      "hit",
+      "takeaway",
+      "giveaway",
+      "period-start",
+      "period-end",
+      "game-end",
+      "shootout-complete"
+    ]);
+
+    const EVENT_TYPE_LABELS = {
+      "goal": "Goal",
+      "penalty": "Penalty",
+      "delayed-penalty": "Delayed penalty",
+      "shot-on-goal": "Shot on goal",
+      "missed-shot": "Missed shot",
+      "blocked-shot": "Blocked shot",
+      "hit": "Hit",
+      "takeaway": "Takeaway",
+      "giveaway": "Giveaway",
+      "period-start": "Period start",
+      "period-end": "Period end",
+      "game-end": "Game end",
+      "shootout-complete": "Shootout complete"
+    };
+
+    const dateInput = document.getElementById("dateInput");
+    const todayBtn = document.getElementById("todayBtn");
+    const refreshBtn = document.getElementById("refreshBtn");
+    const autoRefreshCheckbox = document.getElementById("autoRefresh");
+    const dateLabel = document.getElementById("dateLabel");
+    const lastUpdated = document.getElementById("lastUpdated");
+    const assetsStatus = document.getElementById("assetsStatus");
+    const errorBox = document.getElementById("errorBox");
+    const loading = document.getElementById("loading");
+    const liveStatus = document.getElementById("liveStatus");
+    const connectionDot = document.getElementById("connectionDot");
+    const liveGames = document.getElementById("liveGames");
+    const upcomingGames = document.getElementById("upcomingGames");
+    const finalGames = document.getElementById("finalGames");
+    const liveCount = document.getElementById("liveCount");
+    const upcomingCount = document.getElementById("upcomingCount");
+    const finalCount = document.getElementById("finalCount");
+
+    let timer = null;
+    let currentMode = "now";
+    let teamAssetsByAbbrev = {};
+    let playersById = {};
+    let teamAssetsLoaded = false;
+    let playerAssetsLoaded = false;
+    let highlightsByGameId = {};
+    let lastPayload = null;
+    let liveHighlightTimer = null;
+    let clockTicker = null;
+    let openHighlightGameIds = new Set();
+    let highlightFilterStateByGameId = {};
+    let liveSocket = null;
+    let reconnectTimer = null;
+    let liveServerConnected = false;
+
+    function showLoading(isLoading) {
+      loading.style.display = isLoading ? "flex" : "none";
+      refreshBtn.disabled = isLoading;
+      refreshBtn.style.opacity = isLoading ? "0.65" : "1";
+    }
+
+    function showError(message = "") {
+      errorBox.style.display = message ? "block" : "none";
+      errorBox.textContent = message || "";
+    }
+
+    function setLiveStatus(status, text) {
+      liveStatus.lastChild.nodeValue = ` ${text}`;
+      connectionDot.className = "connection-dot";
+      if (status === "connected") connectionDot.classList.add("is-connected");
+      if (status === "disconnected") connectionDot.classList.add("is-disconnected");
+    }
+
+    function buildNhlUrl(path) {
+      const cleanPath = String(path).replace(/^\/+/, "");
+      return `${NHL_HTTP_PROXY_URL}?path=${encodeURIComponent(cleanPath)}`;
+    }
+
+    function getScoreUrl() {
+      return currentMode === "now" ? buildNhlUrl("score/now") : buildNhlUrl(`score/${dateInput.value}`);
+    }
+
+    function getPlayByPlayUrl(gameId) {
+      return buildNhlUrl(`gamecenter/${gameId}/play-by-play`);
+    }
+
+    async function fetchJsonFromUrl(url, timeoutMs = FETCH_TIMEOUT_MS) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        const response = await fetch(url, {
+          cache: "no-store",
+          signal: controller.signal
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.json();
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    function updateAssetsStatus() {
+      assetsStatus.textContent = `Assets: ${Object.keys(teamAssetsByAbbrev).length} teams · ${Object.keys(playersById).length} players`;
+    }
+
+    function normalizeHex(value, fallback = "#8a96a8") {
+      if (!value) return fallback;
+      const clean = String(value).trim().replace("#", "");
+      return /^[0-9A-Fa-f]{6}$/.test(clean) ? `#${clean.toUpperCase()}` : fallback;
+    }
+
+    function getField(object, ...keys) {
+      for (const key of keys) {
+        if (object && object[key] !== undefined && object[key] !== null && object[key] !== "") {
+          return object[key];
+        }
+      }
+      return "";
+    }
+
+    function getNestedField(object, path, fallback = "") {
+      const value = path.split(".").reduce((acc, key) => acc && acc[key], object);
+      return value === undefined || value === null || value === "" ? fallback : value;
+    }
+
+    function extractArray(payload, possibleKeys) {
+      if (Array.isArray(payload)) return payload;
+      for (const key of possibleKeys) {
+        if (Array.isArray(payload?.[key])) return payload[key];
+      }
+      return [];
+    }
+
+    function normalizeTeamAsset(raw) {
+      const abbrev = String(getField(raw, "teamabreviation", "teamAbreviation", "teamabbreviation", "teamAbbreviation", "abbrev") || "").trim().toUpperCase();
+      return {
+        abbrev,
+        fullName: getField(raw, "teamfullname", "teamFullName"),
+        placeName: getField(raw, "teamplacename", "teamPlaceName"),
+        commonName: getField(raw, "teamcommonname", "teamCommonName"),
+        logoLight: getField(raw, "teamlogolight", "teamLogoLight"),
+        logoDark: getField(raw, "teamlogodark", "teamLogoDark"),
+        color1: normalizeHex(getField(raw, "teamcolor1", "teamColor1")),
+        color2: normalizeHex(getField(raw, "teamcolor2", "teamColor2"), "#ffffff"),
+        color3: normalizeHex(getField(raw, "teamcolor3", "teamColor3"), ""),
+        color4: normalizeHex(getField(raw, "teamcolor4", "teamColor4"), "")
+      };
+    }
+
+    function normalizePlayerAsset(raw) {
+      const id = String(getField(raw, "playerID", "playerId", "playerid", "id") || "").trim();
+      return {
+        id,
+        number: getField(raw, "playerNumber", "playernumber", "number"),
+        fullName: getField(raw, "playerFullName", "playerfullname", "fullName", "name"),
+        firstName: getField(raw, "playerFirstName", "playerfirstname", "firstName"),
+        lastName: getField(raw, "playerLastName", "playerlastname", "lastName"),
+        teamAbbrev: String(getField(raw, "playerTeamAbv", "playerteamabv", "teamAbbrev", "teamAbv") || "").toUpperCase(),
+        headshot: getField(raw, "playerHeadshot", "playerheadshot", "headshot")
+      };
+    }
+
+    async function loadTeamAssets() {
+      if (teamAssetsLoaded) return;
+      try {
+        const payload = await fetchJsonFromUrl(TEAM_ASSETS_URL, 5000);
+        const map = {};
+        extractArray(payload, ["data", "teams", "values"]).forEach(item => {
+          const asset = normalizeTeamAsset(item);
+          if (asset.abbrev) map[asset.abbrev] = asset;
+        });
+        teamAssetsByAbbrev = map;
+        teamAssetsLoaded = true;
+      } catch (error) {
+        console.error("Team assets could not be loaded", error);
+      } finally {
+        updateAssetsStatus();
+      }
+    }
+
+    async function loadPlayerAssets() {
+      if (playerAssetsLoaded) return;
+      try {
+        const payload = await fetchJsonFromUrl(PLAYER_ASSETS_URL, 6500);
+        const map = {};
+        extractArray(payload, ["data", "players", "values"]).forEach(item => {
+          const player = normalizePlayerAsset(item);
+          if (player.id) map[player.id] = player;
+        });
+        playersById = map;
+        playerAssetsLoaded = true;
+      } catch (error) {
+        console.error("Player assets could not be loaded", error);
+      } finally {
+        updateAssetsStatus();
+      }
+    }
+
+    function getTeamAsset(teamOrAbbrev) {
+      const abbrev = typeof teamOrAbbrev === "string"
+        ? teamOrAbbrev.toUpperCase()
+        : String(teamOrAbbrev?.abbrev || "").toUpperCase();
+      return teamAssetsByAbbrev[abbrev] || null;
+    }
+
+    function getTeamLogo(team) {
+      const asset = getTeamAsset(team);
+      if (!asset) return team?.logo || "";
+      return LOGO_THEME === "light" ? asset.logoLight || team?.logo || "" : asset.logoDark || team?.logo || "";
+    }
+
+    function getTeamPrimaryColor(teamOrAbbrev) {
+      return getTeamAsset(teamOrAbbrev)?.color1 || "#8a96a8";
+    }
+
+    function getTeamSecondaryColor(teamOrAbbrev) {
+      return getTeamAsset(teamOrAbbrev)?.color2 || getTeamAsset(teamOrAbbrev)?.color1 || "#ffffff";
+    }
+
+    function getTeamTertiaryColor(teamOrAbbrev) {
+      return getTeamAsset(teamOrAbbrev)?.color3 || getTeamAsset(teamOrAbbrev)?.color2 || getTeamAsset(teamOrAbbrev)?.color1 || "#8a96a8";
+    }
+
+    function getTeamName(team) {
+      const asset = getTeamAsset(team);
+      return asset?.fullName || team?.name?.default || team?.placeName?.default || team?.abbrev || "Team";
+    }
+
+    function getPlayer(playerId) {
+      if (!playerId && playerId !== 0) return null;
+      return playersById[String(playerId)] || null;
+    }
+
+    function getPlayerName(playerId, fallback = "") {
+      const player = getPlayer(playerId);
+      if (player?.fullName) return player.fullName;
+      if (player?.firstName || player?.lastName) return `${player.firstName || ""} ${player.lastName || ""}`.trim();
+      return fallback || (playerId ? `Player ${playerId}` : "Unknown player");
+    }
+
+    function getPlayerHeadshot(playerId, fallback = "") {
+      return getPlayer(playerId)?.headshot || fallback || "";
+    }
+
+    function formatDateEn(dateString) {
+      if (!dateString) return "—";
+      const [year, month, day] = dateString.split("-").map(Number);
+      return new Date(year, month - 1, day).toLocaleDateString("en-CA", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      });
+    }
+
+    function formatTimeLocal(utcString) {
+      if (!utcString) return "Time TBD";
+      return new Date(utcString).toLocaleTimeString("en-CA", {
+        hour: "numeric",
+        minute: "2-digit"
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function toTitleCase(value) {
+      return String(value || "")
+        .replaceAll("-", " ")
+        .replaceAll("_", " ")
+        .split(" ")
+        .map(word => word ? word[0].toUpperCase() + word.slice(1) : "")
+        .join(" ");
+    }
+
+    function isLiveGame(game) { return ["LIVE", "CRIT"].includes(game.gameState); }
+    function isUpcomingGame(game) { return ["FUT", "PRE"].includes(game.gameState); }
+    function isFinalGame(game) { return ["FINAL", "OFF"].includes(game.gameState); }
+
+    function getGameCategory(game) {
+      if (isLiveGame(game)) return "live";
+      if (isUpcomingGame(game)) return "upcoming";
+      if (isFinalGame(game)) return "final";
+      return "upcoming";
+    }
+
+    function getScore(team, game) {
+      return isUpcomingGame(game) ? "—" : (Number.isFinite(team?.score) ? team.score : 0);
+    }
+
+    function formatPeriod(game) {
+      const descriptor = game.periodDescriptor || {};
+      const number = descriptor.number || game.period;
+      const type = descriptor.periodType;
+      if (type === "OT") return number && number > 4 ? `OT ${number - 3}` : "Overtime";
+      if (type === "SO") return "Shootout";
+      if (!number) return "Live";
+      return `P${number}`;
+    }
+
+    function formatIntermission(game) {
+      const period = game.period || game.periodDescriptor?.number || 0;
+      const time = game.clock?.timeRemaining || "";
+      if (period === 1) return `1st intermission${time ? ` · ${time}` : ""}`;
+      if (period === 2) return `2nd intermission${time ? ` · ${time}` : ""}`;
+      return `Intermission${time ? ` · ${time}` : ""}`;
+    }
+
+    function getStatusText(game) {
+      if (isUpcomingGame(game)) return game.gameState === "PRE" ? "Warmup" : "Upcoming";
+      if (isFinalGame(game)) {
+        const lastPeriod = game.gameOutcome?.lastPeriodType;
+        if (lastPeriod === "OT") return "Final / OT";
+        if (lastPeriod === "SO") return "Final / SO";
+        return "Final";
+      }
+      if (game.clock?.inIntermission) return formatIntermission(game);
+      const period = formatPeriod(game);
+      const clock = game.clock?.timeRemaining;
+      return clock ? `${period} · ${clock}` : period;
+    }
+
+    function getStatusClass(game) {
+      if (isLiveGame(game)) return "live";
+      if (isFinalGame(game)) return "final";
+      return "upcoming";
+    }
+
+    function getStatusDot(game) {
+      return isLiveGame(game) ? '<span class="live-dot"></span>' : "";
+    }
+
+    function parseClockToSeconds(clockText) {
+      if (!clockText || typeof clockText !== "string" || !clockText.includes(":")) return null;
+      const parts = clockText.split(":").map(Number);
+      if (parts.length !== 2 || parts.some(Number.isNaN)) return null;
+      return Math.max(0, parts[0] * 60 + parts[1]);
+    }
+
+    function formatSecondsAsClock(totalSeconds) {
+      const safeSeconds = Math.max(0, Math.ceil(totalSeconds));
+      const minutes = Math.floor(safeSeconds / 60);
+      const seconds = safeSeconds % 60;
+      return `${minutes}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    function getLiveClockPrefix(game) {
+      if (game.clock?.inIntermission) {
+        const period = game.period || game.periodDescriptor?.number || 0;
+        if (period === 1) return "1st intermission";
+        if (period === 2) return "2nd intermission";
+        return "Intermission";
+      }
+      return formatPeriod(game);
+    }
+
+    function shouldClockRunLocally(game) {
+      if (!isLiveGame(game) || isFinalGame(game)) return false;
+      if (!game.clock?.timeRemaining) return false;
+      if (game.clock?.running === false) return false;
+      return true;
+    }
+
+    function renderStatusContent(game) {
+      const clockText = game.clock?.timeRemaining || "";
+      const seconds = parseClockToSeconds(clockText);
+      if (!isLiveGame(game) || seconds === null) return escapeHtml(getStatusText(game));
+
+      const prefix = getLiveClockPrefix(game);
+      const running = shouldClockRunLocally(game) ? "true" : "false";
+      const updatedAt = Date.now();
+
+      return `<span class="live-clock" data-prefix="${escapeHtml(prefix)}" data-seconds="${seconds}" data-running="${running}" data-updated-at="${updatedAt}">${escapeHtml(prefix)} · ${escapeHtml(clockText)}</span>`;
+    }
+
+    function updateLiveClocks() {
+      document.querySelectorAll(".live-clock").forEach(clockElement => {
+        const prefix = clockElement.dataset.prefix || "Live";
+        const baseSeconds = Number(clockElement.dataset.seconds || 0);
+        const updatedAt = Number(clockElement.dataset.updatedAt || Date.now());
+        const running = clockElement.dataset.running === "true";
+        const elapsedSeconds = running ? (Date.now() - updatedAt) / 1000 : 0;
+        const currentSeconds = Math.max(0, baseSeconds - elapsedSeconds);
+        clockElement.textContent = `${prefix} · ${formatSecondsAsClock(currentSeconds)}`;
+      });
+    }
+
+    function startClockTicker() {
+      if (clockTicker) clearInterval(clockTicker);
+      clockTicker = setInterval(updateLiveClocks, CLOCK_TICK_MS);
+      updateLiveClocks();
+    }
+
+    function getSeriesText(game) {
+      const s = game.seriesStatus;
+      if (!s) return "";
+      const top = s.topSeedTeamAbbrev;
+      const bottom = s.bottomSeedTeamAbbrev;
+      const topWins = s.topSeedWins;
+      const bottomWins = s.bottomSeedWins;
+      const needed = s.neededToWin || 4;
+
+      let leader = "Series tied";
+      if (topWins > bottomWins) leader = `${top} leads ${topWins}-${bottomWins}`;
+      if (bottomWins > topWins) leader = `${bottom} leads ${bottomWins}-${topWins}`;
+      if (topWins >= needed) leader = `${top} wins series ${topWins}-${bottomWins}`;
+      if (bottomWins >= needed) leader = `${bottom} wins series ${bottomWins}-${topWins}`;
+
+      return `Game ${s.gameNumberOfSeries || "—"} · ${leader}`;
+    }
+
+    function getBroadcastsText(game) {
+      const broadcasts = game.tvBroadcasts || [];
+      const canadian = broadcasts.filter(item => item.countryCode === "CA").map(item => item.network).filter(Boolean);
+      const selected = canadian.length ? canadian : broadcasts.map(item => item.network).filter(Boolean);
+      return selected.length ? `Broadcast: ${selected.slice(0, 4).join(", ")}` : "";
+    }
+
+    function getPeriodLabel(periodNumber, periodType = "REG") {
+      if (periodType === "SO") return "Shootout";
+      if (periodType === "OT") return periodNumber && periodNumber > 4 ? `Overtime ${periodNumber - 3}` : "Overtime";
+      return periodNumber ? `Period ${periodNumber}` : "Game events";
+    }
+
+    function getPlayType(play) {
+      return String(play.typeDescKey || play.eventTypeDescKey || play.typeCode || play.type || "event").toLowerCase();
+    }
+
+    function getPlayPeriodNumber(play) {
+      return play.periodDescriptor?.number || play.period || play.periodNumber || 0;
+    }
+
+    function getPlayPeriodType(play) {
+      return play.periodDescriptor?.periodType || play.periodType || "REG";
+    }
+
+    function getPlayTime(play) {
+      return play.timeInPeriod || play.time_in_period || play.clock?.timeRemaining || "--:--";
+    }
+
+    function getPlaySortValue(play, index) {
+      return Number(play.sortOrder || play.order || play.eventId || index || 0);
+    }
+
+    function getDetails(play) {
+      return play.details || {};
+    }
+
+    function getPrimaryPlayerIdForPlay(play) {
+      const d = getDetails(play);
+      const type = getPlayType(play);
+
+      if (type === "goal") return d.scoringPlayerId || play.playerId;
+      if (type.includes("penalty")) return d.committedByPlayerId || d.servedByPlayerId || d.drawnByPlayerId || play.playerId;
+      if (type === "hit") return d.hittingPlayerId || play.playerId;
+      if (type === "blocked-shot") return d.blockingPlayerId || d.shootingPlayerId || play.playerId;
+      if (["shot-on-goal", "missed-shot"].includes(type)) return d.shootingPlayerId || play.playerId;
+      if (["takeaway", "giveaway"].includes(type)) return d.playerId || play.playerId;
+
+      return play.playerId || "";
+    }
+
+    function getEventTeamAbbrev(play, game) {
+      const primaryPlayer = getPlayer(getPrimaryPlayerIdForPlay(play));
+      if (primaryPlayer?.teamAbbrev) return primaryPlayer.teamAbbrev;
+
+      const d = getDetails(play);
+      const possible = d.eventOwnerTeamAbbrev || d.teamAbbrev || d.teamAbbreviation || play.teamAbbrev || play.teamAbbreviation || "";
+      if (possible) return String(possible).toUpperCase();
+
+      return game?.homeTeam?.abbrev || "";
+    }
+
+    function getStrengthLabel(value) {
+      const key = String(value || "").toLowerCase();
+      if (key === "pp") return "power play";
+      if (key === "sh") return "short-handed";
+      if (key === "ev") return "even strength";
+      if (key === "en") return "empty net";
+      return value ? toTitleCase(value) : "";
+    }
+
+    function formatGoalText(play, game) {
+      const d = getDetails(play);
+      const scorerId = d.scoringPlayerId || play.playerId;
+      const scorer = getPlayerName(scorerId, getNestedField(play, "name.default", "Unknown scorer"));
+      const shotType = d.shotType ? `${toTitleCase(d.shotType)} shot` : "Goal";
+      const strength = getStrengthLabel(d.strength || play.strength);
+      const awayScore = d.awayScore ?? play.awayScore;
+      const homeScore = d.homeScore ?? play.homeScore;
+      const scoreText = Number.isFinite(awayScore) && Number.isFinite(homeScore)
+        ? `${game.awayTeam.abbrev} ${awayScore}, ${game.homeTeam.abbrev} ${homeScore}`
+        : "";
+      const goalie = d.goalieInNetId ? getPlayerName(d.goalieInNetId) : "";
+      return {
+        main: `${scorer} scored${strength ? ` (${strength})` : ""}`,
+        sub: [shotType, goalie ? `against ${goalie}` : "", scoreText].filter(Boolean).join(" · ")
+      };
+    }
+
+    function formatPenaltyText(play) {
+      const d = getDetails(play);
+      const playerId = d.committedByPlayerId || d.servedByPlayerId || d.drawnByPlayerId || play.playerId;
+      const player = getPlayerName(playerId, "Penalty");
+      const penaltyType = d.penaltyTypeDescKey || d.descKey || d.typeDescKey || "penalty";
+      const duration = d.duration || d.penaltyDuration || d.minutes;
+      const drawnBy = d.drawnByPlayerId ? getPlayerName(d.drawnByPlayerId) : "";
+      return {
+        main: `${player}: ${toTitleCase(penaltyType)}`,
+        sub: [duration ? `${duration} min` : "", drawnBy ? `drawn by ${drawnBy}` : ""].filter(Boolean).join(" · ")
+      };
+    }
+
+    function formatShotText(play) {
+      const d = getDetails(play);
+      const type = getPlayType(play);
+      const shooter = getPlayerName(d.shootingPlayerId || play.playerId, "Shot attempt");
+      const shotType = d.shotType ? `${toTitleCase(d.shotType)} shot` : EVENT_TYPE_LABELS[type] || toTitleCase(type);
+      const goalie = d.goalieInNetId ? getPlayerName(d.goalieInNetId) : "";
+      const blocker = d.blockingPlayerId ? getPlayerName(d.blockingPlayerId) : "";
+
+      if (type === "blocked-shot") {
+        return {
+          main: `${shooter} had a shot blocked`,
+          sub: blocker ? `blocked by ${blocker}` : shotType
+        };
+      }
+
+      if (type === "missed-shot") {
+        return {
+          main: `${shooter} missed the net`,
+          sub: shotType
+        };
+      }
+
+      return {
+        main: `${shooter} shot on goal`,
+        sub: [shotType, goalie ? `saved by ${goalie}` : ""].filter(Boolean).join(" · ")
+      };
+    }
+
+    function formatHitText(play) {
+      const d = getDetails(play);
+      const hitter = getPlayerName(d.hittingPlayerId || play.playerId, "Hit");
+      const hittee = d.hitteePlayerId ? getPlayerName(d.hitteePlayerId) : "";
+      return {
+        main: hittee ? `${hitter} hit ${hittee}` : `${hitter} delivered a hit`,
+        sub: ""
+      };
+    }
+
+    function formatTurnoverText(play) {
+      const d = getDetails(play);
+      const type = getPlayType(play);
+      const player = getPlayerName(d.playerId || play.playerId, EVENT_TYPE_LABELS[type] || "Play");
+      return {
+        main: `${player}: ${EVENT_TYPE_LABELS[type] || toTitleCase(type)}`,
+        sub: ""
+      };
+    }
+
+    function formatSimpleEventText(play) {
+      const type = getPlayType(play);
+      return {
+        main: EVENT_TYPE_LABELS[type] || toTitleCase(type),
+        sub: ""
+      };
+    }
+
+    function formatHighlightText(play, game) {
+      const type = getPlayType(play);
+      if (type === "goal") return formatGoalText(play, game);
+      if (type.includes("penalty")) return formatPenaltyText(play);
+      if (["shot-on-goal", "missed-shot", "blocked-shot"].includes(type)) return formatShotText(play);
+      if (type === "hit") return formatHitText(play);
+      if (["takeaway", "giveaway"].includes(type)) return formatTurnoverText(play);
+      return formatSimpleEventText(play);
+    }
+
+    function getHighlightLink(play) {
+      const d = getDetails(play);
+      return d.highlightClipSharingUrl || play.highlightClipSharingUrl || "";
+    }
+
+    function getHighlightCategoryByType(type) {
+      if (type === "goal") return "goals";
+      if (type.includes("penalty")) return "penalties";
+      if (["shot-on-goal", "missed-shot", "blocked-shot"].includes(type)) return "shots";
+      if (type === "hit") return "hits";
+      if (["takeaway", "giveaway"].includes(type)) return "turnovers";
+      if (["period-start", "period-end", "game-end", "shootout-complete"].includes(type)) return "game";
+      return "other";
+    }
+
+    function getCategoryMeta(category) {
+      const map = {
+        goals: { label: "Goals", icon: ICON_URLS.goal },
+        penalties: { label: "Penalties", icon: ICON_URLS.penalty },
+        shots: { label: "Shots", icon: ICON_URLS.shot },
+        hits: { label: "Hits", icon: ICON_URLS.hit },
+        turnovers: { label: "Turnovers", icon: ICON_URLS.turnover },
+        game: { label: "Game", icon: ICON_URLS.game },
+        other: { label: "Other", icon: ICON_URLS.game }
+      };
+      return map[category] || map.other;
+    }
+
+    function buildHighlight(play, game, index) {
+      const type = getPlayType(play);
+      const details = getDetails(play);
+      const primaryPlayerId = getPrimaryPlayerIdForPlay(play);
+      const goalieId = details.goalieInNetId || "";
+      const teamAbbrev = getEventTeamAbbrev(play, game);
+      const text = formatHighlightText(play, game);
+      const periodNumber = getPlayPeriodNumber(play);
+      const periodType = getPlayPeriodType(play);
+      const headshot = getPlayerHeadshot(primaryPlayerId, getNestedField(play, "mugshot", ""));
+      const category = getHighlightCategoryByType(type);
+      const categoryMeta = getCategoryMeta(category);
+
+      return {
+        id: `${game.id}-${getPlaySortValue(play, index)}-${type}`,
+        type,
+        category,
+        categoryLabel: categoryMeta.label,
+        iconUrl: categoryMeta.icon,
+        playerId: String(primaryPlayerId || ""),
+        goalieId: String(goalieId || ""),
+        label: EVENT_TYPE_LABELS[type] || toTitleCase(type),
+        teamAbbrev,
+        color: getTeamPrimaryColor(teamAbbrev),
+        periodNumber,
+        periodType,
+        periodLabel: getPeriodLabel(periodNumber, periodType),
+        time: getPlayTime(play),
+        main: text.main,
+        sub: text.sub,
+        link: getHighlightLink(play),
+        headshot,
+        sort: getPlaySortValue(play, index)
+      };
+    }
+
+    function shouldKeepPlay(play) {
+      return KEY_EVENT_TYPES.has(getPlayType(play));
+    }
+
+    function buildHighlightsFromPlayByPlay(game, payload) {
+      const plays = Array.isArray(payload?.plays) ? payload.plays : [];
+      return plays
+        .map((play, index) => ({ play, index }))
+        .filter(({ play }) => shouldKeepPlay(play))
+        .map(({ play, index }) => buildHighlight(play, game, index))
+        .sort((a, b) => a.sort - b.sort);
+    }
+
+    async function loadHighlightsForGames(games) {
+      const gamesToFetch = games.filter(game => game?.id && !isUpcomingGame(game));
+      if (!gamesToFetch.length) return;
+
+      const results = await Promise.allSettled(
+        gamesToFetch.map(async game => {
+          const payload = await fetchJsonFromUrl(getPlayByPlayUrl(game.id), 4500);
+          return { game, highlights: buildHighlightsFromPlayByPlay(game, payload) };
+        })
+      );
+
+      results.forEach(result => {
+        if (result.status === "fulfilled") {
+          highlightsByGameId[String(result.value.game.id)] = result.value.highlights;
+        } else {
+          console.warn("Highlights could not be loaded for one game", result.reason);
+        }
+      });
+    }
+
+    function startLiveHighlightPolling(games) {
+      if (liveHighlightTimer) clearInterval(liveHighlightTimer);
+      liveHighlightTimer = null;
+
+      const liveGamesList = games.filter(game => isLiveGame(game) && game?.id);
+      if (!liveGamesList.length) return;
+
+      liveHighlightTimer = setInterval(async () => {
+        try {
+          await loadHighlightsForGames(liveGamesList);
+          if (lastPayload && currentMode === "now") renderGames(lastPayload);
+        } catch (error) {
+          console.warn("Live highlights fallback refresh failed", error);
+        }
+      }, LIVE_HIGHLIGHT_REFRESH_MS);
+    }
+
+    function getGameFilterState(gameId) {
+      const key = String(gameId);
+      if (!highlightFilterStateByGameId[key]) {
+        highlightFilterStateByGameId[key] = {
+          event: "all",
+          period: "all"
+        };
+      }
+      return highlightFilterStateByGameId[key];
+    }
+
+    function getAvailableEventFilters(highlights) {
+      const options = [
+        { key: "all", label: "All events" },
+        { key: "goals", label: "Goals" },
+        { key: "penalties", label: "Penalties" },
+        { key: "shots", label: "Shots" },
+        { key: "hits", label: "Hits" },
+        { key: "turnovers", label: "Turnovers" },
+        { key: "game", label: "Game events" }
+      ];
+
+      const categories = new Set(highlights.map(item => item.category));
+      return options.filter(option => option.key === "all" || categories.has(option.key));
+    }
+
+    function getAvailablePeriodFilters(highlights) {
+      const seen = new Map();
+      highlights.forEach(highlight => {
+        const key = `${highlight.periodType}-${highlight.periodNumber}`;
+        if (!seen.has(key)) {
+          seen.set(key, {
+            key,
+            label: highlight.periodLabel,
+            sort: highlight.periodNumber || 0,
+            periodType: highlight.periodType
+          });
+        }
+      });
+
+      const sorted = [...seen.values()].sort((a, b) => {
+        if (a.sort !== b.sort) return a.sort - b.sort;
+        return String(a.periodType).localeCompare(String(b.periodType));
+      });
+
+      return [{ key: "all", label: "All periods" }, ...sorted];
+    }
+
+    function filterHighlightsForGame(game, highlights) {
+      const state = getGameFilterState(game.id);
+
+      return highlights.filter(highlight => {
+        const matchesEvent = state.event === "all" ? true : highlight.category === state.event;
+        const highlightPeriodKey = `${highlight.periodType}-${highlight.periodNumber}`;
+        const matchesPeriod = state.period === "all" ? true : highlightPeriodKey === state.period;
+        return matchesEvent && matchesPeriod;
+      });
+    }
+
+    function renderHighlightFilters(game, allHighlights) {
+      const state = getGameFilterState(game.id);
+      const eventOptions = getAvailableEventFilters(allHighlights);
+      const periodOptions = getAvailablePeriodFilters(allHighlights);
+
+      return `
+        <div class="highlight-filter-panel" data-game-id="${escapeHtml(game.id)}">
+          <div class="highlight-filter-field">
+            <label for="highlight-event-${escapeHtml(game.id)}">
+              <span class="filter-label-icon" style="mask-image:url('${ICON_URLS.goal}'); -webkit-mask-image:url('${ICON_URLS.goal}');"></span>
+              Event type
+            </label>
+            <select id="highlight-event-${escapeHtml(game.id)}" class="highlight-filter-select" data-filter-kind="event">
+              ${eventOptions.map(option => `
+                <option value="${escapeHtml(option.key)}" ${state.event === option.key ? "selected" : ""}>${escapeHtml(option.label)}</option>
+              `).join("")}
+            </select>
+          </div>
+
+          <div class="highlight-filter-field">
+            <label for="highlight-period-${escapeHtml(game.id)}">
+              <span class="filter-label-icon" style="mask-image:url('${ICON_URLS.game}'); -webkit-mask-image:url('${ICON_URLS.game}');"></span>
+              Period
+            </label>
+            <select id="highlight-period-${escapeHtml(game.id)}" class="highlight-filter-select" data-filter-kind="period">
+              ${periodOptions.map(option => `
+                <option value="${escapeHtml(option.key)}" ${state.period === option.key ? "selected" : ""}>${escapeHtml(option.label)}</option>
+              `).join("")}
+            </select>
+          </div>
+        </div>
+      `;
+    }
+
+    function addStarCandidate(candidates, playerId, teamAbbrev, points, reason) {
+      if (!playerId || !Number.isFinite(points)) return;
+
+      const key = String(playerId);
+      const player = getPlayer(key);
+      const reliableTeamAbbrev = player?.teamAbbrev || teamAbbrev || "";
+
+      if (!candidates[key]) {
+        candidates[key] = {
+          playerId: key,
+          teamAbbrev: reliableTeamAbbrev,
+          score: 0,
+          reasons: {}
+        };
+      }
+
+      candidates[key].score += points;
+      candidates[key].teamAbbrev = reliableTeamAbbrev || candidates[key].teamAbbrev;
+      if (reason) {
+        candidates[key].reasons[reason] = (candidates[key].reasons[reason] || 0) + 1;
+      }
+    }
+
+    function buildStarPlayer(game) {
+      const highlights = highlightsByGameId[String(game.id)] || [];
+      if (!highlights.length) return null;
+
+      const meaningfulEvents = highlights.filter(item => !["period-start", "period-end", "game-end"].includes(item.type));
+      const goalEvents = highlights.filter(item => item.type === "goal");
+
+      if (!isFinalGame(game) && meaningfulEvents.length < 6 && goalEvents.length === 0) return null;
+
+      const candidates = {};
+
+      highlights.forEach(highlight => {
+        const teamAbbrev = highlight.teamAbbrev || "";
+        const playerId = highlight.playerId || "";
+        const goalieId = highlight.goalieId || "";
+
+        if (highlight.type === "goal") {
+          addStarCandidate(candidates, playerId, teamAbbrev, 5, "goals");
+          addStarCandidate(candidates, goalieId, "", -0.8, "goals against");
+        }
+
+        if (highlight.type === "shot-on-goal") {
+          addStarCandidate(candidates, playerId, teamAbbrev, 0.35, "shots on goal");
+          addStarCandidate(candidates, goalieId, "", 0.32, "saves");
+        }
+
+        if (highlight.type === "missed-shot") addStarCandidate(candidates, playerId, teamAbbrev, 0.15, "shot attempts");
+        if (highlight.type === "blocked-shot") addStarCandidate(candidates, playerId, teamAbbrev, 0.55, "blocked shots");
+        if (highlight.type === "hit") addStarCandidate(candidates, playerId, teamAbbrev, 0.35, "hits");
+        if (highlight.type === "takeaway") addStarCandidate(candidates, playerId, teamAbbrev, 0.6, "takeaways");
+        if (highlight.type === "giveaway") addStarCandidate(candidates, playerId, teamAbbrev, -0.5, "giveaways");
+        if (highlight.type.includes("penalty")) addStarCandidate(candidates, playerId, teamAbbrev, -1.2, "penalties");
+      });
+
+      const best = Object.values(candidates)
+        .filter(candidate => getPlayer(candidate.playerId))
+        .sort((a, b) => b.score - a.score)[0];
+
+      if (!best || best.score < 3.5) return null;
+
+      const player = getPlayer(best.playerId);
+      const topReasons = Object.entries(best.reasons)
+        .filter(([, count]) => count > 0)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([reason, count]) => `${count} ${reason}`);
+
+      const teamAbbrev = best.teamAbbrev || player.teamAbbrev;
+
+      return {
+        player,
+        teamAbbrev,
+        color: getTeamPrimaryColor(teamAbbrev),
+        color2: getTeamSecondaryColor(teamAbbrev),
+        reason: topReasons.length ? topReasons.join(" · ") : "Strong overall impact"
+      };
+    }
+
+    function renderStarPlayer(game) {
+      const star = buildStarPlayer(game);
+      if (!star) return "";
+
+      const initials = star.player.fullName
+        ? star.player.fullName.split(" ").map(part => part[0]).join("").slice(0, 2)
+        : "★";
+
+      return `
+        <div class="star-player" style="--star-color:${escapeHtml(star.color)}; --star-color-2:${escapeHtml(star.color2)};">
+          <div class="star-headshot">
+            ${star.player.headshot
+              ? `<img src="${escapeHtml(star.player.headshot)}" alt="${escapeHtml(star.player.fullName)}" loading="lazy" />`
+              : escapeHtml(initials)
+            }
+          </div>
+          <div class="star-body">
+            <div class="star-kicker">Standout Player</div>
+            <div class="star-name">${escapeHtml(star.player.fullName)}</div>
+            <div class="star-reason">${escapeHtml(star.reason)}</div>
+          </div>
+          <div class="star-team">${escapeHtml(star.teamAbbrev || "")}</div>
+        </div>
+      `;
+    }
+
+    function renderTeamRow(team, game, sideLabel) {
+      const asset = getTeamAsset(team);
+      const logo = getTeamLogo(team);
+      const abbrev = team?.abbrev || asset?.abbrev || "";
+      const teamName = getTeamName(team);
+      const score = getScore(team, game);
+      const sog = Number.isFinite(team?.sog) && !isUpcomingGame(game) ? ` · SOG: ${team.sog}` : "";
+      const primaryColor = getTeamPrimaryColor(team);
+      const secondaryColor = getTeamSecondaryColor(team);
+      const tertiaryColor = getTeamTertiaryColor(team);
+      const place = asset?.placeName || team?.placeName?.default || "";
+      const common = asset?.commonName || "";
+      const subtitle = place && common ? `${sideLabel} · ${place} ${common}${sog}` : `${sideLabel}${sog}`;
+
+      return `
+        <div class="team-row" style="--team-color:${escapeHtml(primaryColor)}; --team-color-2:${escapeHtml(secondaryColor)}; --team-color-3:${escapeHtml(tertiaryColor)};">
+          <div class="logo-wrap">
+            ${logo ? `<img src="${escapeHtml(logo)}" alt="${escapeHtml(abbrev)} logo" loading="lazy" />` : ""}
+          </div>
+          <div class="team-name">
+            <div class="team-main">${escapeHtml(teamName)}</div>
+            <div class="team-sub"><span class="team-abbrev">${escapeHtml(abbrev)}</span> · ${escapeHtml(subtitle)}</div>
+          </div>
+          <div class="score">${escapeHtml(score)}</div>
+        </div>
+      `;
+    }
+
+    function renderHighlightItem(highlight) {
+      const categoryMeta = getCategoryMeta(highlight.category);
+
+      const iconBadge = `
+        <span class="highlight-event-badge">
+          <span class="highlight-event-glyph" style="background:${escapeHtml(highlight.color)}; mask-image:url('${categoryMeta.icon}'); -webkit-mask-image:url('${categoryMeta.icon}');"></span>
+        </span>
+      `;
+
+      const iconContent = highlight.headshot
+        ? `<img src="${escapeHtml(highlight.headshot)}" alt="" loading="lazy" />${iconBadge}`
+        : `<span class="highlight-event-glyph" style="background:${escapeHtml(highlight.color)}; mask-image:url('${categoryMeta.icon}'); -webkit-mask-image:url('${categoryMeta.icon}');"></span>`;
+
+      const mainText = highlight.link
+        ? `<a class="highlight-link" href="${escapeHtml(highlight.link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(highlight.main)}</a>`
+        : escapeHtml(highlight.main);
+
+      return `
+        <div class="highlight-item" style="--event-color:${escapeHtml(highlight.color)};">
+          <div class="highlight-icon">${iconContent}</div>
+          <div class="highlight-main">
+            <div class="highlight-meta">
+              <span class="team-chip">${escapeHtml(highlight.teamAbbrev || "NHL")}</span>
+              <span>${escapeHtml(highlight.label)}</span>
+              <span>${escapeHtml(highlight.periodLabel)}</span>
+              <span>${escapeHtml(highlight.time)}</span>
+            </div>
+            <div class="highlight-text">${mainText}</div>
+            ${highlight.sub ? `<div class="highlight-subtext">${escapeHtml(highlight.sub)}</div>` : ""}
+          </div>
+        </div>
+      `;
+    }
+
+    function groupHighlightsByPeriod(highlights) {
+      return highlights.reduce((groups, highlight) => {
+        const key = `${highlight.periodType}-${highlight.periodNumber}`;
+        if (!groups[key]) {
+          groups[key] = {
+            label: highlight.periodLabel,
+            sort: highlight.periodNumber || 0,
+            items: []
+          };
+        }
+        groups[key].items.push(highlight);
+        return groups;
+      }, {});
+    }
+
+    function renderHighlights(game) {
+      const allHighlights = highlightsByGameId[String(game.id)] || [];
+
+      if (isUpcomingGame(game)) {
+        return `
+          <div class="highlights">
+            <div class="highlights-title-row">
+              <h3 class="highlights-title">Highlights</h3>
+            </div>
+            <div class="empty-highlights">Highlights will appear once the game starts.</div>
+          </div>
+        `;
+      }
+
+      if (!allHighlights.length) {
+        return `
+          <div class="highlights">
+            <div class="highlights-title-row">
+              <h3 class="highlights-title">Highlights</h3>
+            </div>
+            <div class="empty-highlights">No key events available yet.</div>
+          </div>
+        `;
+      }
+
+      const filteredHighlights = filterHighlightsForGame(game, allHighlights);
+      const latestThree = [...filteredHighlights].sort((a, b) => b.sort - a.sort).slice(0, 3);
+      const grouped = Object.values(groupHighlightsByPeriod(filteredHighlights)).sort((a, b) => a.sort - b.sort);
+      const openAttr = openHighlightGameIds.has(String(game.id)) ? "open" : "";
+
+      return `
+        <div class="highlights">
+          <div class="highlights-title-row">
+            <h3 class="highlights-title">Latest Highlights</h3>
+            <span class="pill">${filteredHighlights.length}/${allHighlights.length} shown</span>
+          </div>
+
+          ${renderHighlightFilters(game, allHighlights)}
+
+          ${filteredHighlights.length
+            ? `
+              <div class="highlight-list">${latestThree.map(renderHighlightItem).join("")}</div>
+              <details class="full-feed" data-game-id="${escapeHtml(game.id)}" ${openAttr}>
+                <summary>Show full filtered event log by period</summary>
+                ${grouped.map(group => `
+                  <div class="period-group">
+                    <h4 class="period-group-title">${escapeHtml(group.label)}</h4>
+                    <div class="highlight-list">${group.items.map(renderHighlightItem).join("")}</div>
+                  </div>
+                `).join("")}
+              </details>
+            `
+            : `<div class="empty-highlights">No events match the selected filters.</div>`
+          }
+        </div>
+      `;
+    }
+
+    function renderGameCard(game) {
+      const statusClass = getStatusClass(game);
+      const startTime = formatTimeLocal(game.startTimeUTC);
+      const venue = game.venue?.default || "";
+      const seriesText = getSeriesText(game);
+      const broadcastsText = getBroadcastsText(game);
+      const nhlLink = game.gameCenterLink ? `https://www.nhl.com${game.gameCenterLink}` : "";
+      const awayColor = getTeamPrimaryColor(game.awayTeam);
+      const homeColor = getTeamPrimaryColor(game.homeTeam);
+      const awayColor2 = getTeamSecondaryColor(game.awayTeam);
+      const homeColor2 = getTeamSecondaryColor(game.homeTeam);
+      const awayColor3 = getTeamTertiaryColor(game.awayTeam);
+      const homeColor3 = getTeamTertiaryColor(game.homeTeam);
+      const awayAbbrev = game.awayTeam?.abbrev || "";
+      const homeAbbrev = game.homeTeam?.abbrev || "";
+
+      return `
+        <article class="game-card" style="--away-color:${escapeHtml(awayColor)}; --home-color:${escapeHtml(homeColor)}; --away-color-2:${escapeHtml(awayColor2)}; --home-color-2:${escapeHtml(homeColor2)}; --away-color-3:${escapeHtml(awayColor3)}; --home-color-3:${escapeHtml(homeColor3)};">
+          <div class="game-top">
+            <div>
+              <div class="status ${statusClass}">${getStatusDot(game)}${renderStatusContent(game)}</div>
+              <span class="matchup-mini">
+                <span>${escapeHtml(awayAbbrev)}</span>
+                <span>@</span>
+                <span>${escapeHtml(homeAbbrev)}</span>
+              </span>
+            </div>
+            <div class="game-time">${escapeHtml(startTime)}</div>
+          </div>
+
+          <div class="teams">
+            ${renderTeamRow(game.awayTeam, game, "Away")}
+            ${renderTeamRow(game.homeTeam, game, "Home")}
+          </div>
+
+          <div class="game-footer">
+            ${venue ? `<span class="pill">${escapeHtml(venue)}</span>` : ""}
+            ${seriesText ? `<span class="pill">${escapeHtml(seriesText)}</span>` : ""}
+            ${broadcastsText ? `<span class="pill">${escapeHtml(broadcastsText)}</span>` : ""}
+            ${nhlLink ? `<a class="pill" href="${escapeHtml(nhlLink)}" target="_blank" rel="noopener noreferrer">NHL Gamecenter</a>` : ""}
+          </div>
+
+          ${renderStarPlayer(game)}
+          ${renderHighlights(game)}
+        </article>
+      `;
+    }
+
+    function renderEmpty(container, text) {
+      container.innerHTML = `<div class="empty-state">${escapeHtml(text)}</div>`;
+    }
+
+    function sortGames(games) {
+      return [...games].sort((a, b) => new Date(a.startTimeUTC) - new Date(b.startTimeUTC));
+    }
+
+    function renderGames(payload) {
+      const games = sortGames(payload.games || []);
+      const live = games.filter(game => getGameCategory(game) === "live");
+      const upcoming = games.filter(game => getGameCategory(game) === "upcoming");
+      const final = games.filter(game => getGameCategory(game) === "final");
+
+      liveCount.textContent = live.length;
+      upcomingCount.textContent = upcoming.length;
+      finalCount.textContent = final.length;
+
+      liveGames.innerHTML = live.map(renderGameCard).join("");
+      upcomingGames.innerHTML = upcoming.map(renderGameCard).join("");
+      finalGames.innerHTML = final.map(renderGameCard).join("");
+
+      if (!live.length) renderEmpty(liveGames, "No games are live right now.");
+      if (!upcoming.length) renderEmpty(upcomingGames, "No upcoming games for this date.");
+      if (!final.length) renderEmpty(finalGames, "No final games for this date.");
+      if (!games.length) renderEmpty(liveGames, "No NHL games found for this date.");
+
+      updateLiveClocks();
+    }
+
+    function handleScoreboardPayload(payload, source = "live") {
+      if (!payload) return;
+
+      const games = sortGames(payload.games || []);
+      lastPayload = payload;
+
+      if (payload.currentDate && currentMode === "now") {
+        dateInput.value = payload.currentDate;
+      }
+
+      dateLabel.textContent = `Date: ${formatDateEn(payload.currentDate || dateInput.value)}`;
+      lastUpdated.textContent = `Updated: ${new Date().toLocaleTimeString("en-CA", {
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit"
+      })} · ${source}`;
+
+      renderGames(payload);
+      showLoading(false);
+      showError("");
+
+      if (source !== "live") {
+        startLiveHighlightPolling(games);
+      }
+    }
+
+    function handlePlayByPlayPayload(gameId, payload) {
+      if (!lastPayload || !gameId || !payload) return;
+
+      const game = (lastPayload.games || []).find(item => String(item.id) === String(gameId));
+      if (!game) return;
+
+      highlightsByGameId[String(gameId)] = buildHighlightsFromPlayByPlay(game, payload);
+      renderGames(lastPayload);
+    }
+
+    function connectLiveServer() {
+      if (liveSocket && (liveSocket.readyState === WebSocket.OPEN || liveSocket.readyState === WebSocket.CONNECTING)) return;
+
+      try {
+        setLiveStatus("connecting", "Connecting to live server");
+        liveSocket = new WebSocket(NHL_WEBSOCKET_URL);
+
+        liveSocket.addEventListener("open", () => {
+          liveServerConnected = true;
+          setLiveStatus("connected", "Live server connected");
+          showError("");
+          console.log("Connected to NHL live server");
+        });
+
+        liveSocket.addEventListener("message", event => {
+          try {
+            const data = JSON.parse(event.data);
+
+            if (data.type === "scoreboard" && currentMode === "now") {
+              handleScoreboardPayload(data.payload, "live");
+            }
+
+            if (data.type === "playByPlay" && currentMode === "now") {
+              handlePlayByPlayPayload(data.gameId, data.payload);
+            }
+          } catch (error) {
+            console.warn("Invalid live message", error);
+          }
+        });
+
+        liveSocket.addEventListener("close", () => {
+          liveServerConnected = false;
+          setLiveStatus("disconnected", "Live server disconnected · reconnecting");
+          if (reconnectTimer) clearTimeout(reconnectTimer);
+          reconnectTimer = setTimeout(connectLiveServer, 5000);
+        });
+
+        liveSocket.addEventListener("error", () => {
+          liveServerConnected = false;
+          setLiveStatus("disconnected", "Live server connection error");
+        });
+      } catch (error) {
+        liveServerConnected = false;
+        setLiveStatus("disconnected", "Unable to connect to live server");
+        console.warn("Unable to connect to NHL live server", error);
+      }
+    }
+
+    async function loadScores() {
+      showError("");
+      showLoading(true);
+
+      try {
+        const payload = await fetchJsonFromUrl(getScoreUrl(), 6500);
+        const games = sortGames(payload.games || []);
+        handleScoreboardPayload(payload, currentMode === "now" ? "fallback" : "date lookup");
+
+        Promise.allSettled([loadTeamAssets(), loadPlayerAssets()]).then(() => {
+          if (lastPayload === payload) renderGames(payload);
+        });
+
+        loadHighlightsForGames(games).then(() => {
+          if (lastPayload === payload) renderGames(payload);
+        }).catch(error => {
+          console.warn("Fallback highlights could not be loaded", error);
+        });
+      } catch (error) {
+        console.error(error);
+        showError(`Unable to load NHL scoreboard. Technical detail: ${error.message}. If this is the first Render load of the day, wait a few seconds and refresh.`);
+        showLoading(false);
+      }
+    }
+
+    function restartAutoRefresh() {
+      if (timer) clearInterval(timer);
+      timer = null;
+
+      if (!autoRefreshCheckbox.checked && liveHighlightTimer) {
+        clearInterval(liveHighlightTimer);
+        liveHighlightTimer = null;
+      }
+
+      if (autoRefreshCheckbox.checked) {
+        timer = setInterval(loadScores, REFRESH_MS);
+      }
+    }
+
+    todayBtn.addEventListener("click", () => {
+      currentMode = "now";
+      connectLiveServer();
+      loadScores();
+      restartAutoRefresh();
+    });
+
+    refreshBtn.addEventListener("click", () => {
+      loadScores();
+      if (currentMode === "now") connectLiveServer();
+      restartAutoRefresh();
+    });
+
+    dateInput.addEventListener("change", () => {
+      currentMode = "date";
+      loadScores();
+      restartAutoRefresh();
+    });
+
+    autoRefreshCheckbox.addEventListener("change", restartAutoRefresh);
+
+    document.addEventListener("change", event => {
+      const select = event.target.closest?.(".highlight-filter-select[data-filter-kind]");
+      if (!select) return;
+
+      const wrapper = select.closest(".highlight-filter-panel[data-game-id]");
+      const gameId = String(wrapper?.dataset?.gameId || "");
+      const kind = select.dataset.filterKind;
+      if (!gameId || !kind) return;
+
+      const state = getGameFilterState(gameId);
+      state[kind] = select.value || "all";
+
+      if (lastPayload) renderGames(lastPayload);
+    });
+
+    document.addEventListener("toggle", event => {
+      const details = event.target;
+      if (!details.matches || !details.matches("details.full-feed[data-game-id]")) return;
+
+      const gameId = String(details.dataset.gameId || "");
+      if (!gameId) return;
+
+      if (details.open) openHighlightGameIds.add(gameId);
+      else openHighlightGameIds.delete(gameId);
+    }, true);
+
+    Promise.allSettled([loadTeamAssets(), loadPlayerAssets()]).then(() => {
+      if (lastPayload) renderGames(lastPayload);
+    });
+
+    loadScores();
+    connectLiveServer();
+    restartAutoRefresh();
+    startClockTicker();
+  </script>
+</body>
+</html>
